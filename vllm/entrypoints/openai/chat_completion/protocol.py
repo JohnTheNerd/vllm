@@ -58,10 +58,23 @@ class ChatMessage(OpenAIBaseModel):
     audio: OpenAIChatCompletionAudio | None = None
     function_call: FunctionCall | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
+    reasoning_content: str | None = None  # Deprecated: use reasoning instead
 
     # vLLM-specific fields that are not in OpenAI spec
     reasoning: str | None = None
 
+    @model_validator(mode="after")
+    def sync_reasoning_fields(self) -> "DeltaMessage":
+        """Maintain backward compatibility by syncing reasoning fields.
+        The reasoning_content field is deprecated in favor of reasoning.
+        This validator ensures both fields stay in sync for backward
+        compatibility with clients that expect reasoning_content.
+        """
+        if self.reasoning is not None:
+            self.reasoning_content = self.reasoning
+        elif self.reasoning_content is not None:
+            self.reasoning = self.reasoning_content
+        return self
 
 class ChatCompletionLogProb(OpenAIBaseModel):
     token: str
